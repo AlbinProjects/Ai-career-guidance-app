@@ -2,9 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>careercompass</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0d0d1a" />
+    <meta name="description" content="CareerCompass AI — AI-powered career guidance for students" />
+    <title>CareerCompass AI</title>
+    <style>
+      /* Prevent horizontal scroll on all devices */
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+        background: #0d0d1a;
+        font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+      }
+      #root {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+      /* Scrollbar styling */
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: #0d0d1a; }
+      ::-webkit-scrollbar-thumb { background: #2a2a45; border-radius: 2px; }
+      /* Prevent tap highlight on mobile */
+      * { -webkit-tap-highlight-color: transparent; }
+      /* Better touch scrolling */
+      body { -webkit-overflow-scrolling: touch; }
+      /* Input/button font fix on iOS */
+      input, textarea, button, select { font-family: inherit; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
