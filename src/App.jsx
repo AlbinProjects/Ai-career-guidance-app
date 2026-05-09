@@ -48,7 +48,7 @@ const SESSIONS = [
   {id:"jobs",       label:"Job Market"},
   {id:"resume",     label:"Resume Builder"},
   {id:"planner",    label:"Study Planner"},
-  {id:"internship", label:"Courses & Internships"},
+  {id:"internship", label:"Courses & Internship"},
   {id:"mentor",     label:"AI Mentor 🔒"},
 ];
 
@@ -477,7 +477,7 @@ export default function App() {
           ["📊","Job Market","Demand scores & salary trends",C.teal,"jobs"],
           ["⊗","Resume Builder","ATS-friendly resume builder",C.mint,"resume"],
           ["📋","Study Planner","Goals, exam countdowns, habits & schedule",C.mint,"planner"],
-          ["💼","Courses & Internships","Curated courses & internship finder — coming soon","#94a3b8","internship"],
+          ["💼","Courses & Internship","Curated courses & internship finder — coming soon","#94a3b8","internship"],
           ["◈","AI Mentor","Claude AI powered — coming soon",C.textMuted,"mentor"],
         ].map(([icon,title,desc,col,sid])=>(
           <div key={title} style={{...st.card(C.cardBorder),borderLeft:`3px solid ${col}`,padding:"12px",cursor:"pointer",marginBottom:0}} onClick={()=>setSession(sid)}>
@@ -1602,19 +1602,27 @@ export default function App() {
       case "jobs":       return renderJobs();
       case "resume":     return renderResume();
       case "planner":    return renderPlanner();
-      case "internship": return comingSoon("💼","Courses & Internships","Curated courses and internship finder for your career","#94a3b8",["🔍 Listings matching your assessment","📍 Filter by location & stipend","🏢 Top companies","📝 One-click resume + JD match"]);
+      case "internship": return comingSoon("💼","Courses & Internship","Curated courses and internship finder for your career","#94a3b8",["🔍 Listings matching your assessment","📍 Filter by location & stipend","🏢 Top companies","📝 One-click resume + JD match"]);
       case "mentor":     return comingSoon("🔒","AI Mentor","Claude AI career counsellor",C.textMuted,["What careers suit me?","Best colleges for CSE in Kerala?","How to crack NEET in 6 months?","Scholarships for engineering students?"]);
       default:           return renderHome();
     }
   };
 
-  return(<div style={{minHeight:"100vh",background:C.bg,color:C.textPrimary,fontFamily:"'Space Grotesk','Segoe UI',sans-serif",display:"flex",flexDirection:"column"}}>
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#2a2a45;border-radius:2px}input,textarea,button{font-family:inherit}`}</style>
-    <nav style={{background:C.card,borderBottom:`1px solid ${C.cardBorder}`,padding:"0 10px",display:"flex",alignItems:"center",gap:"1px",overflowX:"auto",position:"sticky",top:0,zIndex:100,scrollbarWidth:"none"}}>
+  return(<div style={{minHeight:"100vh",width:"100%",maxWidth:"100vw",overflowX:"hidden",background:C.bg,color:C.textPrimary,fontFamily:"'Space Grotesk','Segoe UI',sans-serif",display:"flex",flexDirection:"column"}}>
+    <style>{`
+      *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+      html,body,#root{width:100%;max-width:100vw;overflow-x:hidden;margin:0;padding:0}
+      ::-webkit-scrollbar{width:4px;height:4px}
+      ::-webkit-scrollbar-thumb{background:#2a2a45;border-radius:2px}
+      input,textarea,button,select{font-family:inherit}
+      input[type=range]{width:100%}
+      img{max-width:100%}
+    `}</style>
+    <nav style={{background:C.card,borderBottom:`1px solid ${C.cardBorder}`,padding:"0 10px",display:"flex",alignItems:"center",gap:"1px",overflowX:"auto",overflowY:"hidden",position:"sticky",top:0,zIndex:100,scrollbarWidth:"none",WebkitOverflowScrolling:"touch",width:"100%",maxWidth:"100vw"}}>
       <div style={{fontSize:"12px",fontWeight:700,color:C.accent,marginRight:"6px",flexShrink:0}}>◈ CC</div>
       {SESSIONS.map(s=>(<button key={s.id} onClick={()=>setSession(s.id)} style={{padding:"12px 9px",fontSize:"10px",fontWeight:session===s.id?600:400,color:session===s.id?C.accent:C.textSecondary,cursor:"pointer",background:"none",border:"none",borderBottom:`2px solid ${session===s.id?C.accent:"transparent"}`,whiteSpace:"nowrap",fontFamily:"inherit"}}>{s.label}</button>))}
     </nav>
-    <main style={{flex:1,padding:"18px 14px",maxWidth:"900px",margin:"0 auto",width:"100%"}}>
+    <main style={{flex:1,padding:"18px 14px",maxWidth:"900px",margin:"0 auto",width:"100%",minWidth:0,overflowX:"hidden"}}>
       {renderSession()}
     </main>
   </div>);
