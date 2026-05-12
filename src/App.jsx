@@ -286,6 +286,11 @@ export default function App() {
   const [jobCat,setJobCat]=useState("all");
   const [resume,setResume]=useState({name:"",email:"",phone:"",dob:"",address:"",objective:"",edu:"",skills:"",expType:"fresher",experience:"",projects:"",achievements:"",languages:"",jd:""});
   const [resumeSaved,setResumeSaved]=useState(false);
+  const [atsScore,setAtsScore]=useState(null);
+  const [atsMatched,setAtsMatched]=useState([]);
+  const [atsMissing,setAtsMissing]=useState([]);
+  const [resumeGenerated,setResumeGenerated]=useState(false);
+  const [generatingResume,setGeneratingResume]=useState(false);
 
   // ── Study Planner state (top-level so hooks rules are satisfied) ──────────
   const [planTab,setPlanTab]=useState("goals");
@@ -305,14 +310,14 @@ export default function App() {
   ]);
   const [newExam,setNewExam]=useState({name:"",date:""});
   const [schedule,setSchedule]=useState([
-    {id:1,day:"Monday",    subject:"Mathematics",time:"6:00 AM",dur:"2h",col:C.sky},
-    {id:2,day:"Monday",    subject:"Physics",    time:"8:00 AM",dur:"1.5h",col:C.teal},
-    {id:3,day:"Tuesday",   subject:"Chemistry",  time:"6:00 AM",dur:"2h",col:C.mint},
-    {id:4,day:"Tuesday",   subject:"English",    time:"8:00 AM",dur:"1h",col:C.lavender},
-    {id:5,day:"Wednesday", subject:"Mathematics",time:"6:00 AM",dur:"2h",col:C.sky},
-    {id:6,day:"Thursday",  subject:"Biology",    time:"6:00 AM",dur:"2h",col:C.gold},
-    {id:7,day:"Friday",    subject:"Revision",   time:"6:00 AM",dur:"3h",col:C.accent},
-    {id:8,day:"Saturday",  subject:"Mock Test",  time:"9:00 AM",dur:"3h",col:C.orange},
+    {id:1,day:"Monday",    subject:"Mathematics",time:"06:00",dur:"2h",col:C.sky},
+    {id:2,day:"Monday",    subject:"Physics",    time:"08:00",dur:"1.5h",col:C.teal},
+    {id:3,day:"Tuesday",   subject:"Chemistry",  time:"06:00",dur:"2h",col:C.mint},
+    {id:4,day:"Tuesday",   subject:"English",    time:"08:00",dur:"1h",col:C.lavender},
+    {id:5,day:"Wednesday", subject:"Mathematics",time:"06:00",dur:"2h",col:C.sky},
+    {id:6,day:"Thursday",  subject:"Biology",    time:"06:00",dur:"2h",col:C.gold},
+    {id:7,day:"Friday",    subject:"Revision",   time:"06:00",dur:"3h",col:C.accent},
+    {id:8,day:"Saturday",  subject:"Mock Test",  time:"09:00",dur:"3h",col:C.orange},
   ]);
   const [newSched,setNewSched]=useState({day:"Monday",subject:"",time:"06:00",dur:"1h"});
   const [habits,setHabits]=useState([
@@ -436,6 +441,97 @@ export default function App() {
     const b=new Blob([txt],{type:"text/plain"});const u=URL.createObjectURL(b);
     const a=document.createElement("a");a.href=u;a.download=`resume_${resume.name||"student"}.txt`;a.click();
     setResumeSaved(true);
+  };
+
+  // ── ATS keyword extractor ────────────────────────────────────────────────
+  const escapeRTF=(str)=>{
+    if(!str)return"";
+    return String(str).replace(/\\/g,"\\\\").replace(/\{/g,"\\{").replace(/\}/g,"\\}").replace(/[\u0080-\uffff]/g,c=>`\\u${c.charCodeAt(0)}?`);
+  };
+
+  const extractKeywords=(jdText)=>{
+    if(!jdText)return[];
+    const stop=new Set(["the","a","an","in","on","at","to","for","of","and","or","with","is","are","was","were","be","been","have","has","will","would","should","could","must","may","can","that","this","we","you","our","your","their","its","from","by","as","into","not","only","all","both","each","more","most","some","also","use","make","like","just","about","any","so","but","if","out","up"]);
+    const words=jdText.toLowerCase().replace(/[^a-z0-9\s\+\#\.]/g," ").split(/\s+/).filter(w=>w.length>2&&!stop.has(w));
+    return[...new Set(words)];
+  };
+
+  const generateATS=()=>{
+    setGeneratingResume(true);
+    setTimeout(()=>{
+      const jdKws=extractKeywords(resume.jd);
+      const resumeText=[resume.objective,resume.skills,resume.experience,resume.projects,resume.achievements,resume.edu].join(" ").toLowerCase();
+      const matched=jdKws.filter(kw=>resumeText.includes(kw));
+      const missing=jdKws.filter(kw=>!resumeText.includes(kw)).slice(0,12);
+      const score=jdKws.length>0?Math.min(98,Math.round((matched.length/jdKws.length)*100)):null;
+      setAtsScore(score);
+      setAtsMatched(matched);
+      setAtsMissing(missing);
+      setResumeGenerated(true);
+      setGeneratingResume(false);
+    },600);
+  };
+
+  const downloadResumeDOCX=()=>{
+    const expLabel=resume.expType==="fresher"?"Fresher (Seeking First Opportunity)":resume.expType==="internship"?"Internship Experience":"Work Experience";
+    const skillsArr=resume.skills.split(",").map(s=>s.trim()).filter(Boolean);
+    const jdKws=extractKeywords(resume.jd);
+    const resumeText=[resume.objective,resume.skills,resume.experience,resume.projects,resume.achievements].join(" ").toLowerCase();
+    const matchedKws=jdKws.filter(kw=>resumeText.includes(kw));
+
+    const e=escapeRTF;
+    const secHeader=(t)=>`\\pard\\sb200\\brdrb\\brdrs\\brdrw8\\brdrclr2 {\\f0\\fs22\\b\\cf2 ${e(t)}}\\par\\pard\\sb0`;
+    const bullet=(t)=>`\\pard\\sb40\\li360\\fi-240{\\f0\\fs20 \\bullet  ${e(t)}}\\par`;
+    const para=(t)=>`\\pard\\sb50{\\f0\\fs20 ${e(t)}}\\par`;
+
+    const expLines=resume.expType==="fresher"
+      ?[`Fresher — seeking first professional opportunity. Strong academic foundation with project experience.`]
+      :(resume.experience||"").split("\n").filter(Boolean);
+
+    const lines=[
+      "{\\rtf1\\ansi\\deff0",
+      "{\\fonttbl{\\f0 Calibri;}}",
+      "{\\colortbl ;\\red27\\green58\\blue107;\\red14\\green116\\blue161;\\red22\\green163\\blue74;}",
+      "\\paperw12240\\paperh15840\\margl1440\\margr1440\\margt1000\\margb1000",
+      // Header block
+      `\\pard\\qc\\sb60{\\f0\\fs52\\b\\cf1 ${e(resume.name||"Your Name")}}\\par`,
+      resume.objective?`\\pard\\qc\\sb40{\\f0\\fs20\\i\\cf2 ${e(resume.objective.slice(0,120)+"...")}}\\par`:"",
+      `\\pard\\qc\\sb40{\\f0\\fs18 ${[resume.phone,resume.email,resume.address,resume.dob].filter(Boolean).map(e).join("   |   ")}}\\par`,
+      `\\pard\\sb60\\brdrb\\brdrs\\brdrw20\\brdrclr1 \\par`,
+      // Objective
+      resume.objective?secHeader("CAREER OBJECTIVE")+para(resume.objective)+"\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par":"",
+      // Education
+      secHeader("EDUCATION"),
+      ...resume.edu.split("\n").filter(Boolean).map(l=>para(l)),
+      `\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`,
+      // Skills
+      skillsArr.length?secHeader("SKILLS")+`\\pard\\sb50{\\f0\\fs20 ${skillsArr.map(e).join("   \\u8226?   ")}}\\par\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`:"",
+      // Experience
+      secHeader(expLabel.toUpperCase()),
+      ...expLines.map(l=>l.trim().startsWith("-")||l.trim().startsWith("•")||l.trim().startsWith("*")?bullet(l.replace(/^[-•*]\s*/,"")): para(l)),
+      `\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`,
+      // Projects
+      resume.projects?secHeader("PROJECTS")+resume.projects.split("\n").filter(Boolean).map((l,i)=>{
+        const isBullet=l.trim().startsWith("-")||l.trim().startsWith("•")||l.trim().startsWith("*");
+        const isNum=/^\d+\./.test(l.trim());
+        return isBullet?bullet(l.replace(/^[-•*]\s*/,"")):isNum?`\\pard\\sb80\\li0{\\f0\\fs20\\b ${e(l)}}\\par`:para(l);
+      }).join("")+`\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`:"",
+      // Achievements
+      resume.achievements?secHeader("ACHIEVEMENTS & EXTRACURRICULARS")+resume.achievements.split("\n").filter(Boolean).map(l=>bullet(l.replace(/^[-•*]\s*/,""))).join("")+`\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`:"",
+      // Languages
+      resume.languages?secHeader("LANGUAGES")+para(resume.languages)+`\\pard\\sb60\\brdrb\\brdrs\\brdrw6\\brdrclr2 \\par`:"",
+      // ATS Keywords section
+      matchedKws.length?secHeader("CORE COMPETENCIES")+`\\pard\\sb50{\\f0\\fs20 ${matchedKws.map(k=>k.charAt(0).toUpperCase()+k.slice(1)).map(e).join("   |   ")}}\\par`:"",
+      "}"
+    ].filter(Boolean).join("\n");
+
+    const blob=new Blob([lines],{type:"application/rtf"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`ATS_Resume_${(resume.name||"Student").replace(/\s+/g,"_")}.rtf`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -1349,14 +1445,66 @@ export default function App() {
           <textarea value={resume.jd} onChange={e=>setResume(r=>({...r,jd:e.target.value}))} rows={6} placeholder="Looking for a software engineer with 0–2 yrs experience in Python, REST APIs..." style={{...st.input,resize:"vertical"}}/>
         </div>
       </div>
-      <div style={{marginTop:"14px",display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center"}}>
-        <button style={st.btn(C.mint)} onClick={downloadResume}>⬇ Download Resume (.txt)</button>
-        {resumeSaved&&<span style={{fontSize:"10px",color:C.mint}}>✓ Downloaded</span>}
+      {/* ── Step 1: Generate ATS Resume ─────────────────────────── */}
+      <div style={{...st.card(`${C.lavender}44`),marginTop:"14px",background:`${C.lavender}08`}}>
+        <div style={{fontWeight:700,fontSize:"13px",color:C.lavender,marginBottom:"5px"}}>🧠 Step 1 — Generate ATS Resume</div>
+        <div style={{fontSize:"11px",color:C.textSecondary,marginBottom:"10px",lineHeight:1.6}}>
+          Click below to analyse your resume against the job description and generate an ATS-optimised version.
+          {resume.jd?"":(" — ")} {!resume.jd&&<span style={{color:C.gold}}>Paste a JD above for keyword matching</span>}
+        </div>
+        <button style={{...st.btn(C.lavender),opacity:generatingResume?0.6:1}} onClick={generateATS} disabled={generatingResume}>
+          {generatingResume?"⏳ Analysing...":"🧠 Generate ATS Resume"}
+        </button>
       </div>
-      <div style={{...st.card(`${C.gold}33`),marginTop:"10px",background:`${C.gold}08`}}>
-        <div style={{fontWeight:600,fontSize:"11px",color:C.gold,marginBottom:"4px"}}>ATS Optimization Tips</div>
-        <div style={{fontSize:"10px",color:C.textSecondary,lineHeight:1.7}}>✓ Paste the job description above to get keyword-matched resume content · ✓ Use bullet points in experience · ✓ List skills matching the JD · ✓ Keep objective specific to the role · ATS score improves when your skills & objective match the JD keywords.</div>
-      </div>
+
+      {/* ── ATS Score + Download ──────────────────────────────────── */}
+      {resumeGenerated&&(<div style={{...st.card(`${atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent}44`),marginTop:"8px",background:`${atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent}08`}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"8px",marginBottom:"10px"}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:"13px"}}>
+              {resume.jd
+                ?<>ATS Score: <span style={{color:atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent,fontSize:"20px"}}>{atsScore}%</span></>
+                :"✓ Resume Generated (no JD — paste one for ATS score)"}
+            </div>
+            {resume.jd&&<div style={{fontSize:"10px",color:C.textSecondary,marginTop:"2px"}}>
+              {atsScore>=85?"Excellent — strong JD match":atsScore>=70?"Good — consider adding missing keywords":"Needs improvement — add missing keywords below"}
+            </div>}
+          </div>
+          {resume.jd&&atsScore!==null&&(
+            <div style={{width:"52px",height:"52px",borderRadius:"50%",background:`${atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent}22`,border:`3px solid ${atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span style={{fontSize:"13px",fontWeight:800,color:atsScore>=85?C.mint:atsScore>=70?C.gold:C.accent}}>{atsScore}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Matched keywords */}
+        {atsMatched.length>0&&(<div style={{marginBottom:"8px"}}>
+          <div style={{fontSize:"10px",color:C.mint,fontWeight:600,marginBottom:"4px"}}>✓ Matched Keywords ({atsMatched.length})</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
+            {atsMatched.slice(0,20).map(kw=><span key={kw} style={{fontSize:"10px",padding:"2px 8px",borderRadius:"20px",background:`${C.mint}18`,color:C.mint}}>{kw}</span>)}
+          </div>
+        </div>)}
+
+        {/* Missing keywords */}
+        {atsMissing.length>0&&(<div style={{marginBottom:"10px"}}>
+          <div style={{fontSize:"10px",color:C.gold,fontWeight:600,marginBottom:"4px"}}>⚠ Add these to improve score ({atsMissing.length})</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
+            {atsMissing.map(kw=><span key={kw} style={{fontSize:"10px",padding:"2px 8px",borderRadius:"20px",background:`${C.gold}18`,color:C.gold}}>{kw}</span>)}
+          </div>
+        </div>)}
+
+        {/* Step 2: Download */}
+        <div style={{borderTop:`1px solid ${C.cardBorder}`,paddingTop:"10px",marginTop:"4px"}}>
+          <div style={{fontWeight:600,fontSize:"11px",marginBottom:"7px"}}>📄 Step 2 — Download Your Resume</div>
+          <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+            <button style={st.btn(C.mint)} onClick={downloadResumeDOCX}>⬇ Download ATS Resume (.rtf)</button>
+            <button style={{...st.btnOut,fontSize:"12px"}} onClick={downloadResume}>⬇ Plain Text (.txt)</button>
+          </div>
+          <div style={{fontSize:"9px",color:C.textMuted,marginTop:"6px"}}>
+            .rtf opens in Microsoft Word, Google Docs and LibreOffice — ATS scanners read it perfectly
+          </div>
+        </div>
+      </div>)}
     </div>);
   };
 
@@ -1462,8 +1610,15 @@ export default function App() {
         <div style={st.card()}>
           <div style={{fontWeight:600,fontSize:"11px",color:C.accent,marginBottom:"9px"}}>+ Add Exam</div>
           <input value={newExam.name} onChange={e=>setNewExam(x=>({...x,name:e.target.value}))} placeholder="Exam name e.g. JEE Main 2026" style={{...st.input,marginBottom:"7px"}}/>
-          <input type="date" value={newExam.date} onChange={e=>setNewExam(x=>({...x,date:e.target.value}))} style={{...st.input,marginBottom:"7px"}}/>
-          <button onClick={()=>{if(newExam.name&&newExam.date){setPlanExams(es=>[...es,{id:Date.now(),...newExam,color:C.sky}]);setNewExam({name:"",date:""});}}} style={st.btn(C.accent)}>Add Exam</button>
+          <input type="date" value={newExam.date} onChange={e=>setNewExam(x=>({...x,date:e.target.value}))}
+            style={{...st.input,marginBottom:"7px",colorScheme:"dark",color:C.textPrimary,background:C.bg}}/>
+          {newExam.name&&!newExam.date&&<div style={{fontSize:"10px",color:C.gold,marginBottom:"5px"}}>⚠ Please pick a date above</div>}
+          <button onClick={()=>{
+            if(newExam.name&&newExam.date){
+              setPlanExams(es=>[...es,{id:Date.now(),name:newExam.name,date:newExam.date,color:C.sky}]);
+              setNewExam({name:"",date:""});
+            }
+          }} style={{...st.btn(C.accent),opacity:newExam.name&&newExam.date?1:0.5}}>Add Exam</button>
         </div>
       </div>)}
 
@@ -1478,7 +1633,7 @@ export default function App() {
               <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>
                 {dayItems.map(s=>(
                   <div key={s.id} style={{background:C.bg,border:`1px solid ${s.col}44`,borderLeft:`3px solid ${s.col}`,borderRadius:"10px",padding:"8px 12px",display:"flex",alignItems:"center",gap:"10px"}}>
-                    <div style={{width:"52px",fontSize:"10px",color:C.textSecondary,flexShrink:0}}>{s.time}</div>
+                    <div style={{width:"52px",fontSize:"10px",color:C.textSecondary,flexShrink:0}}>{(()=>{const [h,m]=s.time.split(":");const hr=parseInt(h);return `${hr===0?12:hr>12?hr-12:hr}:${m} ${hr<12?"AM":"PM"}`})()}</div>
                     <div style={{flex:1,fontWeight:600,fontSize:"12px"}}>{s.subject}</div>
                     <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"20px",background:`${s.col}22`,color:s.col}}>{s.dur}</span>
                     <button onClick={()=>setSchedule(ss=>ss.filter(x=>x.id!==s.id))} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:"14px"}}>×</button>
@@ -1494,7 +1649,11 @@ export default function App() {
             <select value={newSched.day} onChange={e=>setNewSched(s=>({...s,day:e.target.value}))} style={{...st.input,padding:"9px 12px"}}>
               {DAYS_FULL.map(d=><option key={d} value={d}>{d}</option>)}
             </select>
-            <input type="time" value={newSched.time} onChange={e=>setNewSched(s=>({...s,time:e.target.value}))} style={st.input}/>
+            <input type="time" id="sched-time"
+              defaultValue={newSched.time}
+              onChange={e=>setNewSched(s=>({...s,time:e.target.value}))}
+              style={{...st.input,colorScheme:"dark",color:C.textPrimary,background:C.bg,
+                WebkitAppearance:"none",appearance:"none",cursor:"pointer"}}/>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px",marginBottom:"7px"}}>
             <input value={newSched.subject} onChange={e=>setNewSched(s=>({...s,subject:e.target.value}))} placeholder="Subject / Activity" style={st.input}/>
@@ -1616,6 +1775,7 @@ export default function App() {
       ::-webkit-scrollbar-thumb{background:#2a2a45;border-radius:2px}
       input,textarea,button,select{font-family:inherit}
       input[type=range]{width:100%}
+      input[type=date],input[type=time],input[type=datetime-local]{color-scheme:dark;color:#f0f0ff;background:#0d0d1a}
       img{max-width:100%}
     `}</style>
     <nav style={{background:C.card,borderBottom:`1px solid ${C.cardBorder}`,padding:"0 10px",display:"flex",alignItems:"center",gap:"1px",overflowX:"auto",overflowY:"hidden",position:"sticky",top:0,zIndex:100,scrollbarWidth:"none",WebkitOverflowScrolling:"touch",width:"100%",maxWidth:"100vw"}}>
