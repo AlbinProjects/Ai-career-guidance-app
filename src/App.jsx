@@ -451,9 +451,38 @@ export default function App() {
 
   const extractKeywords=(jdText)=>{
     if(!jdText)return[];
-    const stop=new Set(["the","a","an","in","on","at","to","for","of","and","or","with","is","are","was","were","be","been","have","has","will","would","should","could","must","may","can","that","this","we","you","our","your","their","its","from","by","as","into","not","only","all","both","each","more","most","some","also","use","make","like","just","about","any","so","but","if","out","up"]);
-    const words=jdText.toLowerCase().replace(/[^a-z0-9\s\+\#\.]/g," ").split(/\s+/).filter(w=>w.length>2&&!stop.has(w));
-    return[...new Set(words)];
+    const SKILLS=new Set([
+      // Programming languages
+      "python","java","javascript","typescript","c","ruby","golang","swift","kotlin","php","scala","rust","dart","perl","bash","matlab","r",
+      // Web & frameworks
+      "html","css","react","angular","vue","nextjs","nodejs","express","django","flask","fastapi","spring","jquery","bootstrap","tailwind","redux","graphql","webpack","vite","sass",
+      // Mobile
+      "android","ios","flutter","reactnative","xamarin",
+      // Databases
+      "sql","mysql","postgresql","mongodb","sqlite","oracle","redis","firebase","cassandra","dynamodb","elasticsearch","nosql",
+      // Cloud & DevOps
+      "aws","azure","gcp","docker","kubernetes","jenkins","git","github","gitlab","linux","terraform","ansible","nginx","heroku","vercel","devops",
+      // Data / ML / AI
+      "machine learning","deep learning","nlp","computer vision","tensorflow","pytorch","keras","scikit-learn","pandas","numpy","matplotlib","tableau","powerbi","hadoop","spark","airflow","llm","langchain","data analysis","data science",
+      // Design
+      "figma","photoshop","illustrator","canva","ux","ui","wireframe","adobe","sketch",
+      // Office & tools
+      "excel","word","powerpoint","ms office","jira","confluence","notion","slack","trello","asana","postman","swagger","selenium","pytest","jest","cypress",
+      // Soft skills
+      "leadership","communication","teamwork","collaboration","problem solving","critical thinking","analytical","creativity","adaptability","time management","project management","presentation","negotiation","mentoring","research","documentation","multitasking","decision making","public speaking","attention to detail","interpersonal","planning","coordination",
+      // Domain
+      "finance","accounting","marketing","sales","operations","supply chain","logistics","healthcare","legal","business analysis","product management","customer service","content writing","seo","digital marketing","social media","auditing","investment","banking","insurance","pharmaceutical","manufacturing","civil","mechanical","electrical","electronics","telecommunications","cybersecurity","networking","encryption","testing","qa","automation","agile","scrum","kanban","microservices","api","blockchain","iot","embedded",
+    ]);
+    const text=jdText.toLowerCase().replace(/[^a-z0-9\s\+\#\.\-\/]/g," ");
+    const found=new Set();
+    // Multi-word skills first
+    SKILLS.forEach(skill=>{if(skill.includes(" ")&&text.includes(skill))found.add(skill);});
+    // Single word skills
+    text.split(/\s+/).forEach(w=>{const c=w.replace(/[^a-z0-9\+\#\.]/g,"");if(c.length>1&&SKILLS.has(c))found.add(c);});
+    // Uppercase abbreviations (AWS, SQL, API etc)
+    const abbrs=[...jdText.matchAll(/\b([A-Z]{2,8})\b/g)].map(m=>m[1].toLowerCase());
+    abbrs.forEach(a=>{if(SKILLS.has(a))found.add(a);});
+    return[...found].slice(0,40);
   };
 
   const generateATS=()=>{
