@@ -1546,8 +1546,11 @@ export default function App() {
     const priorityCol={high:C.accent,medium:C.gold,low:C.teal};
 
     const daysUntil=(dateStr)=>{
-      const d=new Date(dateStr);const n=new Date();n.setHours(0,0,0,0);
-      return Math.ceil((d-n)/(1000*60*60*24));
+      // Parse YYYY-MM-DD directly as LOCAL date (not UTC) to avoid timezone shift
+      const [y,m,d]=dateStr.split("-").map(Number);
+      const examDate=new Date(y,m-1,d);          // local midnight
+      const today=new Date();today.setHours(0,0,0,0); // local today midnight
+      return Math.round((examDate-today)/(1000*60*60*24));
     };
 
     const tabs=[
@@ -1611,7 +1614,7 @@ export default function App() {
         <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"14px"}}>
           {planExams.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(exam=>{
             const days=daysUntil(exam.date);
-            const urgent=days<=30;const soon=days<=90;
+            const urgent=days>0&&days<=30;const soon=days>0&&days<=90;
             const col=urgent?C.accent:soon?C.gold:exam.color;
             const pct=Math.max(0,Math.min(100,Math.round((1-(days/365))*100)));
             return(
@@ -1619,17 +1622,17 @@ export default function App() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}}>
                   <div>
                     <div style={{fontWeight:700,fontSize:"14px"}}>{exam.name}</div>
-                    <div style={{fontSize:"10px",color:C.textSecondary,marginTop:"2px"}}>{new Date(exam.date).toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</div>
+                    <div style={{fontSize:"10px",color:C.textSecondary,marginTop:"2px"}}>{(()=>{const[y,m,d]=exam.date.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});})()}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:"26px",fontWeight:800,color:col,lineHeight:1}}>{days<0?"Passed":days===0?"Today!":days}</div>
+                    <div style={{fontSize:"26px",fontWeight:800,color:col,lineHeight:1}}>{days<0?"Completed ✓":days===0?"Today!":days}</div>
                     {days>0&&<div style={{fontSize:"10px",color:C.textMuted}}>days left</div>}
                   </div>
                 </div>
                 <div style={{height:"5px",background:C.bg,borderRadius:"3px",overflow:"hidden"}}>
                   <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${col}88,${col})`,borderRadius:"3px"}}/>
                 </div>
-                {urgent&&<div style={{fontSize:"10px",color:C.accent,marginTop:"5px",fontWeight:600}}>⚠ Less than 30 days — increase study intensity!</div>}
+                {urgent&&days>0&&<div style={{fontSize:"10px",color:C.accent,marginTop:"5px",fontWeight:600}}>⚠ Less than 30 days — increase study intensity!</div>}
                 <button onClick={()=>setPlanExams(es=>es.filter(e=>e.id!==exam.id))} style={{...st.btnOut,fontSize:"10px",padding:"4px 10px",marginTop:"8px"}}>Remove</button>
               </div>
             );
